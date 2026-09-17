@@ -2,7 +2,33 @@ document.addEventListener("DOMContentLoaded", () => {
   const activitiesList = document.getElementById("activities-list");
   const activitySelect = document.getElementById("activity");
   const signupForm = document.getElementById("signup-form");
+  const loginForm = document.getElementById("login-form");
+  const loginToggle = document.getElementById("login-toggle");
+  const logoutButton = document.getElementById("logout-button");
+  const authStatus = document.getElementById("auth-status");
+  const teacherPrompt = document.getElementById("teacher-prompt");
   const messageDiv = document.getElementById("message");
+  let isTeacher = false;
+
+  function setAuthState(username) {
+    isTeacher = Boolean(username);
+    authStatus.textContent = isTeacher ? `Teacher: ${username}` : "Student view";
+    loginToggle.textContent = isTeacher ? "Teacher account" : "Teacher login";
+    loginForm.classList.toggle("hidden", isTeacher || loginToggle.dataset.open !== "true");
+    signupForm.classList.toggle("hidden", !isTeacher);
+    logoutButton.classList.toggle("hidden", !isTeacher);
+    teacherPrompt.classList.toggle("hidden", isTeacher);
+  }
+
+  async function loadSession() {
+    const response = await fetch("/auth/me");
+    if (response.ok) {
+      const teacher = await response.json();
+      setAuthState(teacher.username);
+    } else {
+      setAuthState(null);
+    }
+  }
 
   // Function to fetch activities from API
   async function fetchActivities() {
@@ -12,6 +38,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       // Clear loading message
       activitiesList.innerHTML = "";
+      activitySelect.innerHTML = '<option value="">-- Select an activity --</option>';
 
       // Populate activities list
       Object.entries(activities).forEach(([name, details]) => {
@@ -28,10 +55,11 @@ document.addEventListener("DOMContentLoaded", () => {
               <h5>Participants:</h5>
               <ul class="participants-list">
                 ${details.participants
-                  .map(
-                    (email) =>
-                      `<li><span class="participant-email">${email}</span><button class="delete-btn" data-activity="${name}" data-email="${email}">❌</button></li>`
-                  )
+                  .map((email) => `<li><span class="participant-email">${email}</span>${
+                    isTeacher
+                      ? `<button class="delete-btn" data-activity="${name}" data-email="${email}">Remove</button>`
+                      : ""
+                  }</li>`)
                   .join("")}
               </ul>
             </div>`
@@ -66,6 +94,42 @@ document.addEventListener("DOMContentLoaded", () => {
       console.error("Error fetching activities:", error);
     }
   }
+
+  loginToggle.addEventListener("click", () => {
+    if (isTeacher) return;
+    const isOpen = loginToggle.dataset.open === "true";
+    loginToggle.dataset.open = String(!isOpen);
+    loginForm.classList.toggle("hidden", isOpen);
+  });
+
+  loginForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const response = await fetch("/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        username: document.getElementById("username").value,
+        password: document.getElementById("password").value,
+      }),
+    });
+    const result = await response.json();
+    if (!response.ok) {
+      messageDiv.textContent = result.detail || "Login failed";
+      messageDiv.className = "error";
+      messageDiv.classList.remove("hidden");
+      return;
+    }
+    loginForm.reset();
+    loginToggle.dataset.open = "false";
+    setAuthState(result.username);
+    fetchActivities();
+  });
+
+  logoutButton.addEventListener("click", async () => {
+    await fetch("/auth/logout", { method: "POST" });
+    setAuthState(null);
+    fetchActivities();
+  });
 
   // Handle unregister functionality
   async function handleUnregister(event) {
@@ -156,5 +220,5 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   // Initialize app
-  fetchActivities();
+  loadSession().then(fetchActivities);
 });

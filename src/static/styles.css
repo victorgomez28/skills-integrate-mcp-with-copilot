@@ -28,6 +28,25 @@ header h1 {
   margin-bottom: 10px;
 }
 
+.auth-controls {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin-top: 16px;
+}
+
+.auth-controls button,
+.secondary-button {
+  background-color: #3949ab;
+  font-size: 14px;
+  padding: 8px 12px;
+}
+
+.secondary-button {
+  margin-top: 12px;
+}
+
 main {
   display: flex;
   flex-wrap: wrap;
@@ -111,12 +130,12 @@ section h3 {
 }
 
 .delete-btn {
-  background: none;
+  background: #ffebee;
   border: none;
   color: #c62828;
   cursor: pointer;
-  font-size: 14px;
-  padding: 2px 5px;
+  font-size: 13px;
+  padding: 4px 8px;
   transition: all 0.2s;
   border-radius: 3px;
 }
